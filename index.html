@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>DiaMar Gestion V3</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f3f4f6;color:#111827}
+header{background:#111827;color:#fff;padding:14px 16px;position:sticky;top:0;z-index:10}.brand{font-weight:800;font-size:20px}.sub{font-size:12px;color:#cbd5e1}
+nav{display:flex;overflow:auto;gap:6px;padding:8px;background:#fff;border-bottom:1px solid #e5e7eb;position:sticky;top:68px;z-index:9}
+nav button{border:0;background:#eef2f7;padding:9px 12px;border-radius:10px;white-space:nowrap;font-weight:700}nav button.active{background:#111827;color:white}
+main{max-width:1200px;margin:auto;padding:14px}.view{display:none}.view.active{display:block}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}.card{background:#fff;border-radius:14px;padding:14px;box-shadow:0 1px 5px #0001}.label{font-size:12px;color:#64748b}.value{font-size:22px;font-weight:800;margin-top:5px}
+.panel{background:#fff;border-radius:14px;padding:14px;margin-top:12px;box-shadow:0 1px 5px #0001}.panel h3{margin:0 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:9px}.wide{grid-column:1/-1}
+input,select,textarea{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:9px;background:#fff;font:inherit}textarea{min-height:70px}
+button{font:inherit;cursor:pointer}.primary{background:#111827;color:#fff;border:0;border-radius:9px;padding:10px 14px;font-weight:700}.secondary{background:#e5e7eb;border:0;border-radius:9px;padding:9px 12px}.danger{background:#fee2e2;color:#991b1b;border:0;border-radius:8px;padding:7px 9px}.small{font-size:12px;padding:6px 8px}
+.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}th{background:#f8fafc}
+.tablewrap{overflow:auto}.muted{color:#64748b}.ok{color:#15803d;font-weight:700}.warn{color:#b45309;font-weight:700}.bad{color:#b91c1c;font-weight:700}
+.tag{display:inline-block;padding:3px 7px;border-radius:999px;background:#eef2ff;font-size:11px}.right{text-align:right}
+.search{margin-bottom:10px}.empty{padding:20px;text-align:center;color:#64748b}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#111827;color:white;padding:10px 15px;border-radius:10px;display:none;z-index:99}
+@media(max-width:600px){main{padding:9px}.panel{padding:11px}th,td{padding:7px 5px;font-size:12px}.value{font-size:19px}}
+</style>
+
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DiaMar Gestion">
+<link rel="icon" href="icons/icon-192.png">
+</head>
+<body>
+<header><div class="brand">🦁 DiaMar Gestion V3</div><div class="sub">Ventes • Achats • Stock • Dettes • Clients • Fournisseurs</div></header>
+<nav id="nav">
+<button data-v="dashboard">📊 Tableau</button><button data-v="products">📦 Produits</button><button data-v="sales">🛒 Ventes</button><button data-v="purchases">🚚 Achats</button><button data-v="contacts">👥 Contacts</button><button data-v="payments">💰 Règlements</button><button data-v="expenses">💸 Dépenses</button><button data-v="reports">📈 Rapports</button><button data-v="backup">⚙️ Données</button>
+</nav>
+
+<style>
+#installBar{display:none;background:#111827;color:#fff;padding:9px 12px;position:sticky;top:0;z-index:20;gap:8px;align-items:center;justify-content:space-between;font-size:13px}
+#installBar button{background:#fff;color:#111827;border:0;border-radius:8px;padding:7px 10px;font-weight:800}
+</style>
+<div id="installBar"><span>📱 Installer DiaMar Gestion sur ce téléphone</span><button id="installBtn">Installer</button></div>
+<main>
+<section id="dashboard" class="view">
+<div class="cards" id="dashCards"></div>
+<div class="panel"><h3>⚠️ Stock faible</h3><div id="lowStock"></div></div>
+<div class="panel"><h3>🕒 Dernières opérations</h3><div class="tablewrap"><table><tbody id="recent"></tbody></table></div></div>
+</section>
+
+<section id="products" class="view">
+<div class="panel"><h3>Ajouter / modifier un produit</h3><form id="productForm"><input type="hidden" id="pId">
+<div class="grid"><input id="pName" placeholder="Nom du produit *" required><input id="pCat" placeholder="Catégorie (Maillot, Caleçon...)"><select id="pUnit"><option>Pièce</option><option>Douzaine</option><option>Lot</option><option>Carton</option><option>Autre</option></select><input id="pBuy" type="number" min="0" placeholder="Prix achat"><input id="pRetail" type="number" min="0" placeholder="Prix détail"><input id="pWholesale" type="number" min="0" placeholder="Prix gros"><input id="pStock" type="number" min="0" placeholder="Stock initial"><input id="pMin" type="number" min="0" placeholder="Seuil stock faible"></div>
+<div class="actions"><button class="primary">Enregistrer</button><button type="button" class="secondary" onclick="resetProduct()">Nouveau</button></div></form></div>
+<div class="panel"><input class="search" id="productSearch" placeholder="🔎 Rechercher un produit..."><div class="tablewrap"><table><thead><tr><th>Produit</th><th>Prix</th><th>Stock</th><th>Actions</th></tr></thead><tbody id="productRows"></tbody></table></div></div>
+</section>
+
+<section id="sales" class="view">
+<div class="panel"><h3>Nouvelle vente</h3><form id="saleForm"><div class="grid">
+<select id="sProduct" required></select><select id="sType"><option value="retail">Détail</option><option value="wholesale">Gros</option><option value="custom">Prix personnalisé</option></select><input id="sQty" type="number" min="1" value="1" required><input id="sPrice" type="number" min="0" placeholder="Prix unitaire"><input id="sClient" placeholder="Client (facultatif)"><input id="sPaid" type="number" min="0" placeholder="Montant payé"><select id="sMethod"><option>Espèces</option><option>Orange Money</option><option>Moov Money</option><option>Virement</option><option>Autre</option></select><input id="sDate" type="date"></div><div class="actions"><button class="primary">Enregistrer la vente</button></div></form></div>
+<div class="panel"><h3>Historique des ventes</h3><input class="search" id="saleSearch" placeholder="🔎 Client, produit, numéro..."><div class="tablewrap"><table><thead><tr><th>N°</th><th>Date</th><th>Client</th><th>Total</th><th>Payé</th><th>Reste</th><th></th></tr></thead><tbody id="saleRows"></tbody></table></div></div>
+</section>
+
+<section id="purchases" class="view">
+<div class="panel"><h3>Nouvel approvisionnement</h3><form id="purchaseForm"><div class="grid">
+<select id="aProduct" required></select><input id="aQty" type="number" min="1" value="1" required><input id="aPrice" type="number" min="0" placeholder="Prix achat unitaire"><input id="aSupplier" placeholder="Fournisseur (facultatif)"><input id="aCargo" type="number" min="0" value="0" placeholder="Transport / cargo"><input id="aPaid" type="number" min="0" placeholder="Montant payé"><input id="aDate" type="date"></div><div class="actions"><button class="primary">Enregistrer l'achat</button></div></form></div>
+<div class="panel"><h3>Historique des achats</h3><div class="tablewrap"><table><thead><tr><th>N°</th><th>Date</th><th>Produit</th><th>Total</th><th>Payé</th><th>Reste</th><th></th></tr></thead><tbody id="purchaseRows"></tbody></table></div></div>
+</section>
+
+<section id="contacts" class="view">
+<div class="panel"><h3>Client / fournisseur</h3><form id="contactForm"><input type="hidden" id="cId"><div class="grid"><input id="cName" placeholder="Nom *" required><select id="cType"><option>Client</option><option>Fournisseur</option></select><input id="cPhone" placeholder="Téléphone"><input id="cAddress" placeholder="Adresse"><textarea id="cNote" placeholder="Note"></textarea></div><div class="actions"><button class="primary">Enregistrer</button><button type="button" class="secondary" onclick="resetContact()">Nouveau</button></div></form></div>
+<div class="panel"><input class="search" id="contactSearch" placeholder="🔎 Rechercher..."><div class="tablewrap"><table><thead><tr><th>Nom</th><th>Type</th><th>Téléphone</th><th>Solde</th><th>Actions</th></tr></thead><tbody id="contactRows"></tbody></table></div></div>
+</section>
+
+<section id="payments" class="view">
+<div class="panel"><h3>Enregistrer un règlement de dette</h3><form id="paymentForm"><div class="grid"><select id="payContact" required></select><select id="payType"><option>Dette client (le client me paie)</option><option>Dette fournisseur (je paie)</option></select><input id="payAmount" type="number" min="1" required placeholder="Montant"><select id="payMethod"><option>Espèces</option><option>Orange Money</option><option>Moov Money</option><option>Virement</option><option>Autre</option></select><input id="payDate" type="date"><input id="payNote" placeholder="Note"></div><div class="actions"><button class="primary">Enregistrer le règlement</button></div></form></div>
+<div class="panel"><h3>Historique des règlements</h3><div class="tablewrap"><table><thead><tr><th>Date</th><th>Contact</th><th>Type</th><th>Montant</th><th></th></tr></thead><tbody id="paymentRows"></tbody></table></div></div>
+</section>
+
+<section id="expenses" class="view">
+<div class="panel"><h3>Nouvelle dépense</h3><form id="expenseForm"><div class="grid"><input id="eLabel" placeholder="Libellé *" required><input id="eAmount" type="number" min="0" required placeholder="Montant"><select id="eCat"><option>Transport</option><option>Publicité</option><option>Loyer</option><option>Communication</option><option>Personnel</option><option>Autre</option></select><input id="eDate" type="date"></div><div class="actions"><button class="primary">Enregistrer</button></div></form></div>
+<div class="panel"><div class="tablewrap"><table><thead><tr><th>Date</th><th>Libellé</th><th>Catégorie</th><th>Montant</th><th></th></tr></thead><tbody id="expenseRows"></tbody></table></div></div>
+</section>
+
+<section id="reports" class="view">
+<div class="panel"><h3>Rapports par période</h3><div class="grid"><input id="rFrom" type="date"><input id="rTo" type="date"><select id="rPeriod"><option value="all">Toutes les dates</option><option value="today">Aujourd'hui</option><option value="month">Ce mois</option></select></div><div class="actions"><button class="primary" onclick="renderReports()">Actualiser</button><button class="secondary" onclick="window.print()">Imprimer</button></div></div>
+<div class="cards" id="reportCards"></div><div class="panel"><h3>Ventes par produit</h3><div class="tablewrap"><table><thead><tr><th>Produit</th><th>Qté</th><th>CA</th><th>Marge</th></tr></thead><tbody id="reportProducts"></tbody></table></div></div>
+</section>
+
+<section id="backup" class="view">
+<div class="panel"><h3>💾 Sauvegarde & restauration</h3><p class="muted">Vos données sont enregistrées dans ce navigateur. Faites régulièrement une sauvegarde JSON, surtout avant de changer de téléphone.</p>
+<div class="actions"><button class="primary" onclick="exportData()">⬇️ Sauvegarder mes données</button><label class="secondary">⬆️ Restaurer<input id="importFile" type="file" accept=".json" style="display:none"></label><button class="danger" onclick="clearAll()">Effacer toutes les données</button></div></div>
+<div class="panel"><h3>Migration</h3><p class="muted">La V3 essaie automatiquement de récupérer les données de DiaMar V2 si elles existent dans ce navigateur.</p></div>
+</section>
+</main><div id="toast" class="toast"></div>
+
+<script>
+const KEY='dimar_v3';
+let db={products:[],sales:[],purchases:[],contacts:[],payments:[],expenses:[]};
+const $=id=>document.getElementById(id), money=n=>new Intl.NumberFormat('fr-FR').format(Math.round(Number(n)||0))+' F CFA';
+const today=()=>new Date().toISOString().slice(0,10);
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function save(){localStorage.setItem(KEY,JSON.stringify(db))}
+function toast(s){$('toast').textContent=s;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',1800)}
+function migrate(){
+ let old=localStorage.getItem('dimar_v2');
+ if(old){try{let o=JSON.parse(old);db={...db,...o};db.products??=[];db.sales??=[];db.purchases??=[];db.contacts??=[];db.payments??=[];db.expenses??[];save();toast('Données V2 récupérées')}catch(e){}}
+ let x=localStorage.getItem(KEY);if(x)try{db={...db,...JSON.parse(x)}}catch(e){}
+}
+function dateVal(id){return $(id).value||today()}
+function contactName(id){let c=db.contacts.find(x=>x.id===id);return c?c.name:(id||'')}
+function productName(id){let p=db.products.find(x=>x.id===id);return p?p.name:'Produit supprimé'}
+function contactBalance(c){
+ let rece=db.sales.filter(s=>s.clientId===c.id).reduce((a,s)=>a+(s.total-s.paid),0);
+ let paid=db.payments.filter(p=>p.contactId===c.id&&p.type.startsWith('Dette client')).reduce((a,p)=>a+p.amount,0);
+ let supp=db.purchases.filter(s=>s.supplierId===c.id).reduce((a,s)=>a+(s.total-s.paid),0);
+ let sp=db.payments.filter(p=>p.contactId===c.id&&p.type.startsWith('Dette fournisseur')).reduce((a,p)=>a+p.amount,0);
+ return c.type==='Client'?rece-paid:supp-sp
+}
+function fillProducts(){
+ ['sProduct','aProduct'].forEach(id=>{let el=$(id), old=el.value;el.innerHTML='<option value="">Choisir un produit</option>'+db.products.map(p=>`<option value="${p.id}">${esc(p.name)} — stock ${p.stock}</option>`).join('');el.value=old});
+}
+function fillContacts(){
+ let client=db.contacts.filter(c=>c.type==='Client'), supp=db.contacts.filter(c=>c.type==='Fournisseur');
+ $('sClient').innerHTML='<option value="">Client (facultatif)</option>'+client.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+ $('aSupplier').innerHTML='<option value="">Fournisseur (facultatif)</option>'+supp.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+ $('payContact').innerHTML='<option value="">Choisir</option>'+db.contacts.map(c=>`<option value="${c.id}">${esc(c.name)} (${c.type})</option>`).join('');
+}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function refresh(){fillProducts();fillContacts();renderAll()}
+function renderAll(){renderDashboard();renderProducts();renderSales();renderPurchases();renderContacts();renderPayments();renderExpenses();renderReports()}
+function renderDashboard(){
+ let ca=db.sales.reduce((a,s)=>a+s.total,0), marg=db.sales.reduce((a,s)=>a+s.margin,0), exp=db.expenses.reduce((a,e)=>a+e.amount,0);
+ let stock=db.products.reduce((a,p)=>a+p.stock*(p.buy||0),0);
+ let cr=db.contacts.filter(c=>c.type==='Client').reduce((a,c)=>a+Math.max(0,contactBalance(c)),0);
+ let sd=db.contacts.filter(c=>c.type==='Fournisseur').reduce((a,c)=>a+Math.max(0,contactBalance(c)),0);
+ $('dashCards').innerHTML=[['CA total',money(ca)],['Marge brute',money(marg)],['Dépenses',money(exp)],['Résultat estimé',money(marg-exp)],['Valeur stock',money(stock)],['Clients à recevoir',money(cr)],['Fournisseurs à payer',money(sd)],['Produits',db.products.length]].map(x=>`<div class="card"><div class="label">${x[0]}</div><div class="value">${x[1]}</div></div>`).join('');
+ let lows=db.products.filter(p=>p.stock<=(p.min||0));
+ $('lowStock').innerHTML=lows.length?lows.map(p=>`<div class="panel" style="margin:5px 0;padding:9px"><b>${esc(p.name)}</b> — ${p.stock} ${esc(p.unit)} <span class="bad">seuil ${p.min||0}</span></div>`).join(''):'<div class="ok">Aucun stock sous le seuil.</div>';
+ let ops=[...db.sales.map(x=>({date:x.date,label:'Vente '+x.number+' — '+productName(x.productId),amount:x.total})),...db.purchases.map(x=>({date:x.date,label:'Achat '+x.number+' — '+productName(x.productId),amount:-x.total}))].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8);
+ $('recent').innerHTML=ops.map(o=>`<tr><td>${o.date}</td><td>${esc(o.label)}</td><td class="${o.amount>=0?'ok':'warn'}">${money(o.amount)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">Aucune opération.</td></tr>';
+}
+function renderProducts(){
+ let q=($('productSearch').value||'').toLowerCase(), arr=db.products.filter(p=>(p.name+' '+p.cat).toLowerCase().includes(q));
+ $('productRows').innerHTML=arr.map(p=>`<tr><td><b>${esc(p.name)}</b><br><span class="tag">${esc(p.cat||'Sans catégorie')}</span></td><td>Achat ${money(p.buy)}<br>Détail ${money(p.retail)}<br>Gros ${money(p.wholesale)}</td><td class="${p.stock<=(p.min||0)?'bad':'ok'}">${p.stock} ${esc(p.unit)}</td><td><button class="secondary small" onclick="editProduct('${p.id}')">Modifier</button> <button class="danger small" onclick="delProduct('${p.id}')">Suppr.</button></td></tr>`).join('')||'<tr><td colspan="4" class="empty">Aucun produit.</td></tr>';
+}
+$('productForm').onsubmit=e=>{e.preventDefault();let id=$('pId').value,p={id:id||uid(),name:$('pName').value.trim(),cat:$('pCat').value.trim(),unit:$('pUnit').value,buy:+$('pBuy').value||0,retail:+$('pRetail').value||0,wholesale:+$('pWholesale').value||0,stock:+$('pStock').value||0,min:+$('pMin').value||0};if(id){let old=db.products.find(x=>x.id===id);p.stock=old.stock+(+$('pStock').value||0)-(+old.originalStock||0);p.originalStock=old.originalStock}else p.originalStock=p.stock;let i=db.products.findIndex(x=>x.id===p.id);i>=0?db.products[i]=p:db.products.push(p);save();resetProduct();refresh();toast('Produit enregistré')};
+function resetProduct(){$('productForm').reset();$('pId').value=''}
+function editProduct(id){let p=db.products.find(x=>x.id===id);$('pId').value=p.id;$('pName').value=p.name;$('pCat').value=p.cat;$('pUnit').value=p.unit;$('pBuy').value=p.buy;$('pRetail').value=p.retail;$('pWholesale').value=p.wholesale;$('pStock').value=p.stock;$('pMin').value=p.min;scrollTo(0,0)}
+function delProduct(id){if(confirm('Supprimer ce produit ?')){db.products=db.products.filter(p=>p.id!==id);save();refresh()}}
+$('productSearch').oninput=renderProducts;
+function nextNum(prefix,arr){return prefix+'-'+new Date().getFullYear()+'-'+String(arr.length+1).padStart(4,'0')}
+$('sType').onchange=()=>setSalePrice();
+$('sProduct').onchange=()=>setSalePrice();
+function setSalePrice(){let p=db.products.find(x=>x.id==$('sProduct').value);if(!p)return;$('sPrice').value=$('sType').value==='wholesale'?p.wholesale:p.retail}
+$('saleForm').onsubmit=e=>{e.preventDefault();let p=db.products.find(x=>x.id==$('sProduct').value),q=+$('sQty').value,price=+$('sPrice').value||0;if(!p)return alert('Choisis un produit');if(q>p.stock)return alert('Stock insuffisant');let total=q*price,paid=Math.min(+$('sPaid').value||0,total);let s={id:uid(),number:nextNum('FAC',db.sales),date:dateVal('sDate'),productId:p.id,qty:q,price,clientId:$('sClient').value,total,paid,method:$('sMethod').value,margin:q*(price-(p.buy||0))};db.sales.push(s);p.stock-=q;save();e.target.reset();$('sDate').value=today();refresh();toast('Vente enregistrée')};
+function renderSales(){let q=($('saleSearch').value||'').toLowerCase();let a=db.sales.filter(s=>(s.number+' '+contactName(s.clientId)+' '+productName(s.productId)).toLowerCase().includes(q)).slice().reverse();$('saleRows').innerHTML=a.map(s=>`<tr><td>${s.number}</td><td>${s.date}</td><td>${esc(contactName(s.clientId)||'Comptant')}</td><td>${money(s.total)}</td><td>${money(s.paid)}</td><td class="${s.total-s.paid?'bad':'ok'}">${money(s.total-s.paid)}</td><td><button class="secondary small" onclick="printSale('${s.id}')">Facture</button></td></tr>`).join('')||'<tr><td colspan="7" class="empty">Aucune vente.</td></tr>'}
+$('saleSearch').oninput=renderSales;
+$('purchaseForm').onsubmit=e=>{e.preventDefault();let p=db.products.find(x=>x.id==$('aProduct').value),q=+$('aQty').value,price=+$('aPrice').value||0;if(!p)return alert('Choisis un produit');let cargo=+$('aCargo').value||0,total=q*price+cargo,paid=Math.min(+$('aPaid').value||0,total);let a={id:uid(),number:nextNum('ACH',db.purchases),date:dateVal('aDate'),productId:p.id,qty:q,price,cargo,supplierId:$('aSupplier').value,total,paid};db.purchases.push(a);p.stock+=q;p.buy=price;save();e.target.reset();$('aDate').value=today();refresh();toast('Achat enregistré')};
+function renderPurchases(){let a=db.purchases.slice().reverse();$('purchaseRows').innerHTML=a.map(s=>`<tr><td>${s.number}</td><td>${s.date}</td><td>${esc(productName(s.productId))}</td><td>${money(s.total)}</td><td>${money(s.paid)}</td><td class="${s.total-s.paid?'bad':'ok'}">${money(s.total-s.paid)}</td><td><button class="danger small" onclick="delPurchase('${s.id}')">Suppr.</button></td></tr>`).join('')||'<tr><td colspan="7" class="empty">Aucun achat.</td></tr>'}
+function delPurchase(id){if(!confirm('Supprimer cet achat ? Le stock sera recalculé.'))return;let a=db.purchases.find(x=>x.id===id),p=db.products.find(x=>x.id===a?.productId);if(a&&p)p.stock-=a.qty;db.purchases=db.purchases.filter(x=>x.id!==id);save();refresh()}
+$('contactForm').onsubmit=e=>{e.preventDefault();let id=$('cId').value,c={id:id||uid(),name:$('cName').value.trim(),type:$('cType').value,phone:$('cPhone').value.trim(),address:$('cAddress').value.trim(),note:$('cNote').value.trim()};let i=db.contacts.findIndex(x=>x.id===c.id);i>=0?db.contacts[i]=c:db.contacts.push(c);save();resetContact();refresh();toast('Contact enregistré')};
+function resetContact(){$('contactForm').reset();$('cId').value=''}
+function editContact(id){let c=db.contacts.find(x=>x.id===id);$('cId').value=c.id;$('cName').value=c.name;$('cType').value=c.type;$('cPhone').value=c.phone;$('cAddress').value=c.address;$('cNote').value=c.note;scrollTo(0,0)}
+function delContact(id){if(confirm('Supprimer ce contact ?')){db.contacts=db.contacts.filter(c=>c.id!==id);save();refresh()}}
+function renderContacts(){let q=($('contactSearch').value||'').toLowerCase();let a=db.contacts.filter(c=>(c.name+' '+c.phone+' '+c.type).toLowerCase().includes(q));$('contactRows').innerHTML=a.map(c=>{let b=contactBalance(c);return `<tr><td><b>${esc(c.name)}</b><br><span class="muted">${esc(c.address||'')}</span></td><td>${c.type}</td><td>${esc(c.phone)}</td><td class="${b>0?'bad':'ok'}">${money(Math.max(0,b))}</td><td><button class="secondary small" onclick="editContact('${c.id}')">Modifier</button> <button class="danger small" onclick="delContact('${c.id}')">Suppr.</button></td></tr>`}).join('')||'<tr><td colspan="5" class="empty">Aucun contact.</td></tr>'}
+$('contactSearch').oninput=renderContacts;
+$('paymentForm').onsubmit=e=>{e.preventDefault();let c=db.contacts.find(x=>x.id==$('payContact').value),amt=+$('payAmount').value;if(!c||!amt)return;let p={id:uid(),contactId:c.id,type:$('payType').value,amount:amt,method:$('payMethod').value,date:dateVal('payDate'),note:$('payNote').value};db.payments.push(p);save();e.target.reset();$('payDate').value=today();refresh();toast('Règlement enregistré')};
+function renderPayments(){let a=db.payments.slice().reverse();$('paymentRows').innerHTML=a.map(p=>`<tr><td>${p.date}</td><td>${esc(contactName(p.contactId))}</td><td>${p.type}</td><td>${money(p.amount)}</td><td><button class="danger small" onclick="delPayment('${p.id}')">Suppr.</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">Aucun règlement.</td></tr>'}
+function delPayment(id){if(confirm('Supprimer ce règlement ?')){db.payments=db.payments.filter(x=>x.id!==id);save();refresh()}}
+$('expenseForm').onsubmit=e=>{e.preventDefault();db.expenses.push({id:uid(),label:$('eLabel').value,amount:+$('eAmount').value,date:dateVal('eDate'),cat:$('eCat').value});save();e.target.reset();$('eDate').value=today();refresh();toast('Dépense enregistrée')};
+function renderExpenses(){$('expenseRows').innerHTML=db.expenses.slice().reverse().map(x=>`<tr><td>${x.date}</td><td>${esc(x.label)}</td><td>${x.cat}</td><td>${money(x.amount)}</td><td><button class="danger small" onclick="delExpense('${x.id}')">Suppr.</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">Aucune dépense.</td></tr>'}
+function delExpense(id){if(confirm('Supprimer ?')){db.expenses=db.expenses.filter(x=>x.id!==id);save();refresh()}}
+function inPeriod(d){let mode=$('rPeriod').value,from=$('rFrom').value,to=$('rTo').value;if(mode==='today')return d===today();if(mode==='month')return d.slice(0,7)===today().slice(0,7);if(from&&d<from)return false;if(to&&d>to)return false;return true}
+function renderReports(){let ss=db.sales.filter(s=>inPeriod(s.date)),pp=db.purchases.filter(s=>inPeriod(s.date)),ee=db.expenses.filter(s=>inPeriod(s.date));let ca=ss.reduce((a,s)=>a+s.total,0),m=ss.reduce((a,s)=>a+s.margin,0),achat=pp.reduce((a,s)=>a+s.total,0),exp=ee.reduce((a,s)=>a+s.amount,0);$('reportCards').innerHTML=[['CA',money(ca)],['Marge brute',money(m)],['Achats',money(achat)],['Dépenses',money(exp)],['Résultat estimé',money(m-exp)]].map(x=>`<div class="card"><div class="label">${x[0]}</div><div class="value">${x[1]}</div></div>`).join('');let map={};ss.forEach(s=>{map[s.productId]??={q:0,ca:0,m:0};map[s.productId].q+=s.qty;map[s.productId].ca+=s.total;map[s.productId].m+=s.margin});$('reportProducts').innerHTML=Object.entries(map).map(([id,x])=>`<tr><td>${esc(productName(id))}</td><td>${x.q}</td><td>${money(x.ca)}</td><td>${money(x.m)}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">Aucune vente sur cette période.</td></tr>'}
+function printSale(id){let s=db.sales.find(x=>x.id===id);if(!s)return;let w=window.open('','_blank');w.document.write(`<html><head><title>${s.number}</title><style>body{font-family:Arial;padding:30px;max-width:600px;margin:auto}h1{font-size:24px}table{width:100%;border-collapse:collapse}td,th{padding:10px;border-bottom:1px solid #ddd;text-align:left}</style></head><body><h1>DiaMar</h1><p>Facture ${s.number}<br>Date : ${s.date}</p><table><tr><th>Produit</th><th>Qté</th><th>PU</th><th>Total</th></tr><tr><td>${esc(productName(s.productId))}</td><td>${s.qty}</td><td>${money(s.price)}</td><td>${money(s.total)}</td></tr></table><h2>Total : ${money(s.total)}</h2><p>Payé : ${money(s.paid)}<br>Reste : ${money(s.total-s.paid)}</p><p>Merci pour votre confiance.</p><script>window.print()<\/script></body></html>`);w.document.close()}
+let deferredInstall=null;
+window.addEventListener('beforeinstallprompt',e=>{
+ e.preventDefault(); deferredInstall=e;
+ const bar=document.getElementById('installBar'); if(bar) bar.style.display='flex';
+});
+document.addEventListener('click',async e=>{
+ if(e.target && e.target.id==='installBtn' && deferredInstall){
+   deferredInstall.prompt();
+   try{await deferredInstall.userChoice}catch(_){}
+   deferredInstall=null;
+   const bar=document.getElementById('installBar'); if(bar) bar.style.display='none';
+ }
+});
+if('serviceWorker' in navigator){
+ window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+}
+function exportData(){let blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='DiaMar_Gestion_V3_'+today()+'.json';a.click();URL.revokeObjectURL(a.href)}
+$('importFile').onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result);if(!x.products||!x.sales)throw 0;db={...db,...x};save();refresh();toast('Sauvegarde restaurée')}catch(err){alert('Fichier invalide')}};r.readAsText(f)}
+function clearAll(){if(confirm('ATTENTION : effacer toutes les données ?')){localStorage.removeItem(KEY);db={products:[],sales:[],purchases:[],contacts:[],payments:[],expenses:[]};refresh();toast('Données effacées')}}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$(b.dataset.v).classList.add('active');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active')});
+migrate();['sDate','aDate','payDate','eDate'].forEach(id=>$(id).value=today());$('rTo').value=today();document.querySelector('nav button').click();refresh();
+</script>
+</body></html>
