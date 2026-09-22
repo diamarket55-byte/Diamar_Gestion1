@@ -1,0 +1,8 @@
+      - name: Corriger JVM Java Kotlin
+        working-directory: DiaMar_Gestion_Android_FINAL
+        run: |
+          find . -type f -name "*.gradle" -exec sed -i 's/VERSION_1_8/VERSION_21/g' {} \;
+          find . -type f -name "*.gradle" -exec sed -i 's/jvmTarget = "1.8"/jvmTarget = "21"/g' {} \;
+          find . -type f -name "*.gradle.kts" -exec sed -i 's/VERSION_1_8/VERSION_21/g' {} \;
+          find . -type f -name "*.gradle.kts" -exec sed -i 's/jvmTarget = "1.8"/jvmTarget = "21"/g' {} \;
+          echo "Java et Kotlin configurés en JVM 21"
