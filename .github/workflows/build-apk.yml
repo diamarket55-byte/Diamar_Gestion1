@@ -38,6 +38,16 @@ jobs:
           unzip -o DiaMar_Gestion_Android_FINAL.zip
           ls -la DiaMar_Gestion_Android_FINAL
 
+      - name: Corriger les versions Compose
+        working-directory: DiaMar_Gestion_Android_FINAL
+        run: |
+          echo "Correction Compose 1.12.x -> 1.11.4"
+          find . -type f \( -name "*.gradle" -o -name "*.gradle.kts" -o -name "*.toml" -o -name "*.properties" \) -print0 | xargs -0 sed -i \
+            -e 's/2026\.09\.00/2026.06.01/g' \
+            -e 's/1\.12\.1/1.11.4/g'
+          echo "Versions après correction:"
+          grep -R "2026.06.01\|1.11.4" . --include="*.gradle" --include="*.gradle.kts" --include="*.toml" --include="*.properties" || true
+
       - name: Construire l APK
         working-directory: DiaMar_Gestion_Android_FINAL
         run: gradle assembleDebug --stacktrace
