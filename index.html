@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>DiaMar Gestion V5.2</title>
+<title>DiaMar Gestion V5.3</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f5f6f8;color:#18202a}
@@ -18,7 +18,7 @@ header{background:#111827;color:#fff;padding:14px;position:sticky;top:0;z-index:
 </head>
 <body>
 <div id="login" class="wrap login"><div class="card">
-<div class="logo">🦁</div><h2 style="text-align:center">DiaMar Gestion V5.2</h2>
+<div class="logo">🦁</div><h2 style="text-align:center">DiaMar Gestion V5.3</h2>
 <p class="muted" style="text-align:center">Gestion en ligne — Supabase</p>
 <div class="form" style="grid-template-columns:1fr">
 <input id="email" type="email" placeholder="Adresse e-mail">
@@ -27,7 +27,7 @@ header{background:#111827;color:#fff;padding:14px;position:sticky;top:0;z-index:
 </div><p id="loginMsg" class="muted"></p></div></div>
 
 <div id="app" class="hide">
-<header><h1>🦁 DiaMar Gestion V5.2 <button class="btn right" onclick="logout()">Déconnexion</button></h1><small id="userLabel"></small></header>
+<header><h1>🦁 DiaMar Gestion V5.3 <button class="btn right" onclick="logout()">Déconnexion</button></h1><small id="userLabel"></small></header>
 <main class="wrap">
 <nav class="tabs">
 <button class="active" data-tab="dash">Tableau</button><button data-tab="products">Produits</button><button data-tab="sales">Ventes</button><button data-tab="purchases">Achats</button><button data-tab="clients">Clients</button><button data-tab="suppliers">Fournisseurs</button><button data-tab="expenses">Dépenses</button><button data-tab="debts">Dettes</button><button data-tab="history">Historique</button>
@@ -153,8 +153,8 @@ function renderDebts(){
  const sd={};purchases.forEach(p=>{const k=(p.supplier_name||'').trim()||'Fournisseur non renseigné';sd[k]=(sd[k]||0)+Math.max(0,Number(p.total_amount||0)-Number(p.paid_amount||0));});
  const ct=Object.values(cd).reduce((a,b)=>a+b,0),st=Object.values(sd).reduce((a,b)=>a+b,0);
  document.getElementById('debtClientsTotal').textContent=money(ct);document.getElementById('debtSuppliersTotal').textContent=money(st);
- document.getElementById('debtClientsList').innerHTML=Object.entries(cd).filter(x=>x[1]>0).map(x=>`<div style="padding:6px 0;border-bottom:1px solid #eee">${esc(x[0])}: <b>${money(x[1])}</b></div>`).join('')||'<p class="muted">Aucune dette client.</p>';
- document.getElementById('debtSuppliersList').innerHTML=Object.entries(sd).filter(x=>x[1]>0).map(x=>`<div style="padding:6px 0;border-bottom:1px solid #eee">${esc(x[0])}: <b>${money(x[1])}</b></div>`).join('')||'<p class="muted">Aucune dette fournisseur.</p>';
+ document.getElementById('debtClientsList').innerHTML=Object.entries(cd).filter(x=>x[1]>0).map(x=>`<div style="padding:8px 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between;gap:8px;align-items:center"><span>${esc(x[0])}: <b>${money(x[1])}</b></span><button class="btn primary" onclick="receiveClientPayment('${esc(x[0]).replace(/'/g,"\\'")}')">+ Paiement</button></div>`).join('')||'<p class="muted">Aucune dette client.</p>';
+ document.getElementById('debtSuppliersList').innerHTML=Object.entries(sd).filter(x=>x[1]>0).map(x=>`<div style="padding:8px 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between;gap:8px;align-items:center"><span>${esc(x[0])}: <b>${money(x[1])}</b></span><button class="btn primary" onclick="paySupplierDebt('${esc(x[0]).replace(/'/g,"\\'")}')">+ Paiement</button></div>`).join('')||'<p class="muted">Aucune dette fournisseur.</p>';
 }
 function renderHistory(){
  const rows=[];
@@ -199,6 +199,53 @@ async function addPurchase(){
 async function addClient(){const v={user_id:me.id,name:g('cname'),phone:g('cphone'),address:g('caddress'),type:'client'};if(!v.name)return toast('Nom obligatoire');const {error}=await sb.from('clients').insert(v);if(error)return toast(error.message);toast('Client ajouté');await loadAll()}
 async function addSupplier(){const v={user_id:me.id,name:g('sname'),phone:g('sphone'),address:g('saddress'),type:'supplier'};if(!v.name)return toast('Nom obligatoire');const {error}=await sb.from('suppliers').insert(v);if(error)return toast(error.message);toast('Fournisseur ajouté');await loadAll()}
 async function addExpense(){const v={user_id:me.id,label:g('elabel'),amount:n('eamount'),category:g('ecat')};if(!v.label||v.amount<=0)return toast('Libellé et montant obligatoires');const {error}=await sb.from('expenses').insert(v);if(error)return toast(error.message);document.getElementById('elabel').value='';document.getElementById('eamount').value='';document.getElementById('ecat').value='';toast('Dépense enregistrée');await loadAll()}
+
+async function receiveClientPayment(clientName){
+ const rows=sales.filter(s=>(s.client_name||'').trim()===clientName && Number(s.total_amount||0)>Number(s.paid_amount||0))
+   .sort((a,b)=>new Date(a.created_at||a.sale_date)-new Date(b.created_at||b.sale_date));
+ const debt=rows.reduce((a,s)=>a+Math.max(0,Number(s.total_amount||0)-Number(s.paid_amount||0)),0);
+ if(debt<=0)return toast('Aucune dette pour ce client');
+ const raw=prompt('Montant reçu de '+clientName+' (F CFA)\\nDette actuelle : '+money(debt));
+ if(raw===null)return;
+ const amount=Number(String(raw).replace(/\s/g,'').replace(',','.'));
+ if(!Number.isFinite(amount)||amount<=0)return toast('Montant invalide');
+ if(amount>debt)return toast('Le paiement dépasse la dette de '+money(debt));
+ let remaining=amount;
+ for(const s of rows){
+   if(remaining<=0)break;
+   const due=Math.max(0,Number(s.total_amount||0)-Number(s.paid_amount||0));
+   const pay=Math.min(remaining,due);
+   const r=await sb.from('sales').update({paid_amount:Number(s.paid_amount||0)+pay}).eq('id',s.id).eq('user_id',me.id);
+   if(r.error)return toast('Paiement arrêté : '+r.error.message);
+   remaining-=pay;
+ }
+ toast('Paiement client enregistré : '+money(amount)+' — reste '+money(debt-amount));
+ await loadAll();
+}
+
+async function paySupplierDebt(supplierName){
+ const rows=purchases.filter(p=>(p.supplier_name||'').trim()===supplierName && Number(p.total_amount||0)>Number(p.paid_amount||0))
+   .sort((a,b)=>new Date(a.created_at||a.purchase_date)-new Date(b.created_at||b.purchase_date));
+ const debt=rows.reduce((a,p)=>a+Math.max(0,Number(p.total_amount||0)-Number(p.paid_amount||0)),0);
+ if(debt<=0)return toast('Aucune dette envers ce fournisseur');
+ const raw=prompt('Montant payé à '+supplierName+' (F CFA)\\nDette actuelle : '+money(debt));
+ if(raw===null)return;
+ const amount=Number(String(raw).replace(/\s/g,'').replace(',','.'));
+ if(!Number.isFinite(amount)||amount<=0)return toast('Montant invalide');
+ if(amount>debt)return toast('Le paiement dépasse la dette de '+money(debt));
+ let remaining=amount;
+ for(const p of rows){
+   if(remaining<=0)break;
+   const due=Math.max(0,Number(p.total_amount||0)-Number(p.paid_amount||0));
+   const pay=Math.min(remaining,due);
+   const r=await sb.from('purchases').update({paid_amount:Number(p.paid_amount||0)+pay}).eq('id',p.id).eq('user_id',me.id);
+   if(r.error)return toast('Paiement arrêté : '+r.error.message);
+   remaining-=pay;
+ }
+ toast('Paiement fournisseur enregistré : '+money(amount)+' — reste '+money(debt-amount));
+ await loadAll();
+}
+
 async function archiveProduct(id){const {error}=await sb.from('products').update({archived:true}).eq('id',id).eq('user_id',me.id);if(error)return toast(error.message);toast('Produit archivé');await loadAll()}
 async function unarchiveProduct(id){const {error}=await sb.from('products').update({archived:false}).eq('id',id).eq('user_id',me.id);if(error)return toast(error.message);toast('Produit réactivé');await loadAll()}
 </script>
