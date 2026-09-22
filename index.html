@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>DiaMar Gestion ULTRA V6</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f5f6f8;color:#18202a}
+header{background:#111827;color:#fff;padding:14px;position:sticky;top:0;z-index:5}header h1{margin:0;font-size:19px}.wrap{max-width:1150px;margin:auto;padding:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}.card{background:#fff;border-radius:14px;padding:14px;box-shadow:0 2px 10px #0000000d}.num{font-size:21px;font-weight:800;margin-top:5px}
+.tabs{display:flex;gap:7px;overflow:auto;padding:10px 0}.tabs button,.btn{border:0;border-radius:10px;padding:10px 13px;background:#e5e7eb;white-space:nowrap}.tabs button.active,.primary{background:#111827;color:#fff}
+.danger{background:#fee2e2!important;color:#991b1b}.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.form input,.form select{width:100%;padding:11px;border:1px solid #d1d5db;border-radius:9px;background:#fff}.tablewrap{overflow:auto}.table{width:100%;border-collapse:collapse;background:#fff}.table th,.table td{padding:9px;border-bottom:1px solid #eee;text-align:left;font-size:13px}
+.muted{color:#667085}.hide{display:none}.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:11px 15px;border-radius:10px;z-index:20;max-width:90%;text-align:center}
+.login{max-width:430px;margin:70px auto}.logo{font-size:34px;text-align:center}.right{float:right}.sectiontitle{display:flex;justify-content:space-between;align-items:center;margin:16px 0 8px}.low{background:#fff7ed;padding:9px;margin:4px 0;border-radius:8px}.actions{display:flex;gap:5px;flex-wrap:wrap}.badge{font-size:11px;padding:4px 7px;border-radius:20px;background:#eef2ff}.good{background:#ecfdf3;color:#166534}.warn{background:#fff7ed;color:#9a3412}.red{color:#b91c1c;font-weight:700}
+</style>
+</head>
+<body>
+<div id="login" class="wrap login"><div class="card">
+<div class="logo">🦁</div><h2 style="text-align:center">DiaMar Gestion ULTRA V6</h2>
+<p class="muted" style="text-align:center">Gestion en ligne — Supabase</p>
+<div class="form" style="grid-template-columns:1fr">
+<input id="email" type="email" placeholder="Adresse e-mail">
+<input id="password" type="password" placeholder="Mot de passe">
+<button class="btn primary" onclick="login()">Se connecter</button>
+</div><p id="loginMsg" class="muted"></p></div></div>
+
+<div id="app" class="hide">
+<header><h1>🦁 DiaMar Gestion ULTRA V6 <button class="btn right" onclick="logout()">Déconnexion</button></h1><small id="userLabel"></small></header>
+<main class="wrap">
+<nav class="tabs">
+<button class="active" data-tab="dash">Tableau</button><button data-tab="products">Produits</button><button data-tab="sales">Ventes</button><button data-tab="purchases">Achats</button><button data-tab="clients">Clients</button><button data-tab="suppliers">Fournisseurs</button><button data-tab="expenses">Dépenses</button><button data-tab="debts">Dettes</button><button data-tab="history">Historique</button>
+</nav>
+
+<section id="dash" class="tab">
+<div class="grid">
+<div class="card">CA total<div id="ca" class="num">0 F CFA</div></div>
+<div class="card">Marge brute<div id="margin" class="num">0 F CFA</div></div>
+<div class="card">Dépenses<div id="exp" class="num">0 F CFA</div></div>
+<div class="card">Achats<div id="buytotal" class="num">0 F CFA</div></div>
+<div class="card">Résultat estimé<div id="result" class="num">0 F CFA</div></div>
+<div class="card">Valeur stock<div id="stockval" class="num">0 F CFA</div></div>
+<div class="card">À recevoir<div id="clientDebt" class="num">0 F CFA</div></div>
+<div class="card">Fournisseurs à payer<div id="supplierDebt" class="num">0 F CFA</div></div>
+</div>
+<div class="sectiontitle"><h3>Stock faible</h3><button class="btn" onclick="loadAll()">↻ Actualiser</button></div>
+<div id="low" class="card muted">Aucun stock faible.</div>
+</section>
+
+<section id="products" class="tab hide"><div class="sectiontitle"><h3>Produits</h3></div>
+<div class="card"><div class="form">
+<input id="pname" placeholder="Nom du produit"><input id="pcat" placeholder="Catégorie"><input id="punit" value="unité" placeholder="Unité">
+<input id="ppurchase" type="number" placeholder="Prix achat"><input id="pretail" type="number" placeholder="Prix détail"><input id="pwholesale" type="number" placeholder="Prix gros">
+<input id="pstock" type="number" placeholder="Stock initial"><input id="pmin" type="number" placeholder="Seuil minimum">
+</div><button class="btn primary" onclick="addProduct()">+ Ajouter le produit</button></div>
+<div class="tablewrap"><table class="table"><thead><tr><th>Produit</th><th>Achat</th><th>Détail</th><th>Gros</th><th>Stock</th><th>État</th><th></th></tr></thead><tbody id="productsBody"></tbody></table></div>
+</section>
+
+<section id="sales" class="tab hide"><div class="sectiontitle"><h3>Nouvelle vente</h3></div>
+<div class="card"><div class="form">
+<select id="saleProduct"></select><input id="saleQty" type="number" value="1" min="1">
+<select id="salePriceType"><option value="retail">Détail</option><option value="wholesale">Gros</option><option value="custom">Personnalisé</option></select>
+<input id="salePrice" type="number" placeholder="Prix unitaire"><input id="saleClient" placeholder="Nom client">
+<select id="salePayMethod"><option>Espèces</option><option>Orange Money</option><option>Moov Money</option><option>Virement</option><option>Autre</option></select>
+<input id="salePaid" type="number" placeholder="Montant payé">
+</div><button class="btn primary" onclick="addSale()">Enregistrer la vente</button></div>
+<div class="tablewrap"><table class="table"><thead><tr><th>Date</th><th>Facture</th><th>Client</th><th>Qté</th><th>Total</th><th>Payé</th><th>Reste</th></tr></thead><tbody id="salesBody"></tbody></table></div>
+</section>
+
+<section id="purchases" class="tab hide"><div class="sectiontitle"><h3>Nouvel achat</h3></div>
+<div class="card"><div class="form">
+<select id="buyProduct"></select><input id="buyQty" type="number" value="1" min="1"><input id="buyPrice" type="number" placeholder="Prix achat unitaire">
+<input id="buySupplier" placeholder="Fournisseur"><input id="buyCargo" type="number" placeholder="Transport / cargo"><input id="buyPaid" type="number" placeholder="Montant payé">
+</div><button class="btn primary" onclick="addPurchase()">Enregistrer l'achat</button></div>
+<div class="tablewrap"><table class="table"><thead><tr><th>Date</th><th>N° achat</th><th>Produit</th><th>Qté</th><th>Total</th><th>Payé</th><th>Reste</th><th>Fournisseur</th></tr></thead><tbody id="purchasesBody"></tbody></table></div>
+</section>
+
+<section id="clients" class="tab hide"><div class="sectiontitle"><h3>Clients</h3></div>
+<div class="card"><div class="form"><input id="cname" placeholder="Nom"><input id="cphone" placeholder="Téléphone"><input id="caddress" placeholder="Adresse"></div><button class="btn primary" onclick="addClient()">+ Ajouter</button></div>
+<div class="tablewrap"><table class="table"><thead><tr><th>Nom</th><th>Téléphone</th><th>Adresse</th></tr></thead><tbody id="clientsBody"></tbody></table></div></section>
+
+<section id="suppliers" class="tab hide"><div class="sectiontitle"><h3>Fournisseurs</h3></div>
+<div class="card"><div class="form"><input id="sname" placeholder="Nom"><input id="sphone" placeholder="Téléphone"><input id="saddress" placeholder="Adresse"></div><button class="btn primary" onclick="addSupplier()">+ Ajouter</button></div>
+<div class="tablewrap"><table class="table"><thead><tr><th>Nom</th><th>Téléphone</th><th>Adresse</th><th>À payer</th></tr></thead><tbody id="suppliersBody"></tbody></table></div></section>
+
+<section id="expenses" class="tab hide"><div class="sectiontitle"><h3>Dépenses</h3></div>
+<div class="card"><div class="form"><input id="elabel" placeholder="Libellé"><input id="eamount" type="number" placeholder="Montant"><input id="ecat" placeholder="Catégorie"></div><button class="btn primary" onclick="addExpense()">+ Enregistrer</button></div>
+<div class="tablewrap"><table class="table"><thead><tr><th>Date</th><th>Libellé</th><th>Catégorie</th><th>Montant</th></tr></thead><tbody id="expensesBody"></tbody></table></div></section>
+
+<section id="debts" class="tab hide"><div class="sectiontitle"><h3>Dettes & paiements à surveiller</h3></div>
+<div class="grid">
+<div class="card"><b>Clients à recevoir</b><div id="debtClientsTotal" class="num">0 F CFA</div><div id="debtClientsList"></div></div>
+<div class="card"><b>Fournisseurs à payer</b><div id="debtSuppliersTotal" class="num">0 F CFA</div><div id="debtSuppliersList"></div></div>
+</div></section>
+
+<section id="history" class="tab hide"><div class="sectiontitle"><h3>Historique</h3><button class="btn" onclick="loadAll()">↻ Actualiser</button></div>
+<div class="card muted">Historique des ventes, achats et dépenses enregistrés dans ton compte.</div>
+<div class="tablewrap"><table class="table"><thead><tr><th>Date</th><th>Type</th><th>Référence</th><th>Détail</th><th>Montant</th></tr></thead><tbody id="historyBody"></tbody></table></div></section>
+</main></div><div id="toast" class="toast hide"></div>
+
+<script>
+const SUPABASE_URL='https://ykjfzturarksfbkcgnvc.supabase.co';
+const SUPABASE_KEY='sb_publishable_BonrJcWteOS8jnBr_lzRaQ_jOTqTRXv';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+let me=null,products=[],clients=[],suppliers=[],sales=[],purchases=[],expenses=[];
+const money=n=>new Intl.NumberFormat('fr-FR').format(Math.round(Number(n)||0))+' F CFA';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+function g(id){return document.getElementById(id).value.trim()} function n(id){return Number(document.getElementById(id).value||0)}
+function toast(t){const e=document.getElementById('toast');e.textContent=t;e.classList.remove('hide');setTimeout(()=>e.classList.add('hide'),2800)}
+async function login(){const email=g('email'),password=document.getElementById('password').value;document.getElementById('loginMsg').textContent='Connexion...';const {data,error}=await sb.auth.signInWithPassword({email,password});if(error){document.getElementById('loginMsg').textContent=error.message;return}showApp(data.user)}
+async function logout(){await sb.auth.signOut();location.reload()}
+function showApp(u){me=u;document.getElementById('login').classList.add('hide');document.getElementById('app').classList.remove('hide');document.getElementById('userLabel').textContent=u.email||'';loadAll()}
+sb.auth.getSession().then(({data})=>{if(data.session)showApp(data.session.user)});
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.tab').forEach(x=>x.classList.add('hide'));document.getElementById(b.dataset.tab).classList.remove('hide')});
+
+async function q(table,order='created_at'){let r=await sb.from(table).select('*').order(order,{ascending:false});if(r.error){toast(r.error.message);return []}return r.data||[]}
+async function loadAll(){
+ if(!me)return;
+ const t=Date.now();
+ [products,clients,suppliers,sales,purchases,expenses]=await Promise.all([
+  q('products'),q('clients','name'),q('suppliers','name'),q('sales'),q('purchases'),q('expenses')
+ ]);
+ render();
+}
+
+function render(){
+ renderProducts();renderSales();renderPurchases();renderClients();renderSuppliers();renderExpenses();renderDebts();renderHistory();updateSelects();
+ const ca=sales.reduce((a,s)=>a+Number(s.total_amount||0),0);
+ const cog=sales.reduce((a,s)=>a+Number(s.cost_amount||0),0);
+ const ex=expenses.reduce((a,s)=>a+Number(s.amount||0),0);
+ const buys=purchases.reduce((a,s)=>a+Number(s.total_amount||0),0);
+ const clientDebt=sales.reduce((a,s)=>a+Math.max(0,Number(s.total_amount||0)-Number(s.paid_amount||0)),0);
+ const supplierDebt=purchases.reduce((a,s)=>a+Math.max(0,Number(s.total_amount||0)-Number(s.paid_amount||0)),0);
+ document.getElementById('ca').textContent=money(ca);
+ document.getElementById('margin').textContent=money(ca-cog);
+ document.getElementById('exp').textContent=money(ex);
+ document.getElementById('buytotal').textContent=money(buys);
+ document.getElementById('result').textContent=money(ca-cog-ex);
+ document.getElementById('stockval').textContent=money(products.filter(p=>!p.archived).reduce((a,p)=>a+Number(p.stock||0)*Number(p.purchase_price||0),0));
+ document.getElementById('clientDebt').textContent=money(clientDebt);
+ document.getElementById('supplierDebt').textContent=money(supplierDebt);
+ const active=products.filter(p=>!p.archived);document.getElementById('low').innerHTML=active.filter(p=>Number(p.stock||0)<=Number(p.min_stock||0)).map(p=>`<div class="low">⚠️ <b>${esc(p.name)}</b> — ${p.stock} ${esc(p.unit||'')}</div>`).join('')||'Aucun stock faible.';
+}
+function renderProducts(){document.getElementById('productsBody').innerHTML=products.map(p=>`<tr><td><b>${esc(p.name)}</b><br><span class="muted">${esc(p.category||'')}</span></td><td>${money(p.purchase_price)}</td><td>${money(p.retail_price)}</td><td>${money(p.wholesale_price)}</td><td>${p.stock}</td><td>${p.archived?'<span class="badge warn">Archivé</span>':'<span class="badge good">Actif</span>'}</td><td>${p.archived?`<button class="btn" onclick="unarchiveProduct('${p.id}')">Réactiver</button>`:`<button class="btn" onclick="archiveProduct('${p.id}')">Archiver</button>`}</td></tr>`).join('')}
+function renderSales(){document.getElementById('salesBody').innerHTML=sales.map(s=>`<tr><td>${date(s.created_at||s.sale_date)}</td><td>${esc(s.invoice_number||'')}</td><td>${esc(s.client_name||'')}</td><td>${s.quantity||''}</td><td>${money(s.total_amount)}</td><td>${money(s.paid_amount)}</td><td class="${Number(s.total_amount)>Number(s.paid_amount)?'red':''}">${money(Math.max(0,Number(s.total_amount)-Number(s.paid_amount)))}</td></tr>`).join('')}
+function renderPurchases(){document.getElementById('purchasesBody').innerHTML=purchases.map(s=>`<tr><td>${date(s.created_at||s.purchase_date)}</td><td>${esc(s.purchase_number||'')}</td><td>${esc(s.supplier_name||'')}</td><td>${s.quantity||''}</td><td>${money(s.total_amount)}</td><td>${money(s.paid_amount)}</td><td class="${Number(s.total_amount)>Number(s.paid_amount)?'red':''}">${money(Math.max(0,Number(s.total_amount)-Number(s.paid_amount)))}</td><td>${esc(s.supplier_name||'')}</td></tr>`).join('')}
+function renderClients(){document.getElementById('clientsBody').innerHTML=clients.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.phone||'')}</td><td>${esc(c.address||'')}</td></tr>`).join('')}
+function renderSuppliers(){const debts={};purchases.forEach(p=>{const k=(p.supplier_name||'').trim()||'Sans fournisseur';debts[k]=(debts[k]||0)+Math.max(0,Number(p.total_amount||0)-Number(p.paid_amount||0))});document.getElementById('suppliersBody').innerHTML=suppliers.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.phone||'')}</td><td>${esc(c.address||'')}</td><td>${money(debts[c.name]||0)}</td></tr>`).join('')}
+function renderExpenses(){document.getElementById('expensesBody').innerHTML=expenses.map(c=>`<tr><td>${date(c.created_at||c.expense_date)}</td><td>${esc(c.label)}</td><td>${esc(c.category||'')}</td><td>${money(c.amount)}</td></tr>`).join('')}
+function renderDebts(){
+ const cd={};sales.forEach(s=>{const k=(s.client_name||'').trim()||'Client non renseigné';cd[k]=(cd[k]||0)+Math.max(0,Number(s.total_amount||0)-Number(s.paid_amount||0));});
+ const sd={};purchases.forEach(p=>{const k=(p.supplier_name||'').trim()||'Fournisseur non renseigné';sd[k]=(sd[k]||0)+Math.max(0,Number(p.total_amount||0)-Number(p.paid_amount||0));});
+ const ct=Object.values(cd).reduce((a,b)=>a+b,0),st=Object.values(sd).reduce((a,b)=>a+b,0);
+ document.getElementById('debtClientsTotal').textContent=money(ct);document.getElementById('debtSuppliersTotal').textContent=money(st);
+ 
+const anonymousSales=sales.filter(s=>!String(s.client_name||'').trim() && Number(s.total_amount||0)>Number(s.paid_amount||0));
+let anonBox=document.getElementById('anonymousDebtsList');
+if(!anonBox){
+ const parent=document.getElementById('debtClientsList').parentElement;
+ const box=document.createElement('div');
+ box.id='anonymousDebtsBox';
+ box.innerHTML='<h3>Ventes à crédit sans client</h3><div id="anonymousDebtsList"></div>';
+ parent.appendChild(box);
+ anonBox=document.getElementById('anonymousDebtsList');
+}
+anonBox.innerHTML=anonymousSales.map(s=>{
+ const rest=Number(s.total_amount||0)-Number(s.paid_amount||0);
+ return `<div style="padding:8px 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between;gap:8px;align-items:center">
+ <span><b>${esc(s.invoice_number||'Vente')}</b> — Reste : <b>${money(rest)}</b></span>
+ <button class="btn primary" onclick="payAnonymousSale('${s.id}')">Payer</button>
+ </div>`;
+}).join('')||'<p class="muted">Aucune vente à crédit sans client.</p>';
+
+document.getElementById('debtClientsList').innerHTML=Object.entries(cd).filter(x=>x[1]>0).map(x=>`<div style="padding:8px 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between;gap:8px;align-items:center"><span>${esc(x[0])}: <b>${money(x[1])}</b></span><button class="btn primary" onclick="receiveClientPayment('${esc(x[0]).replace(/'/g,"\\'")}')">+ Paiement</button></div>`).join('')||'<p class="muted">Aucune dette client.</p>';
+ document.getElementById('debtSuppliersList').innerHTML=Object.entries(sd).filter(x=>x[1]>0).map(x=>`<div style="padding:8px 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between;gap:8px;align-items:center"><span>${esc(x[0])}: <b>${money(x[1])}</b></span><button class="btn primary" onclick="paySupplierDebt('${esc(x[0]).replace(/'/g,"\\'")}')">+ Paiement</button></div>`).join('')||'<p class="muted">Aucune dette fournisseur.</p>';
+}
+function renderHistory(){
+ const rows=[];
+ sales.forEach(s=>rows.push({d:s.created_at||s.sale_date,type:'Vente',ref:s.invoice_number||'',detail:(s.client_name||'Client')+' — '+(s.quantity||0)+' unité(s)',amt:Number(s.total_amount||0)}));
+ purchases.forEach(p=>rows.push({d:p.created_at||p.purchase_date,type:'Achat',ref:p.purchase_number||'',detail:(p.supplier_name||'Fournisseur')+' — '+(p.quantity||0)+' unité(s)',amt:Number(p.total_amount||0)}));
+ expenses.forEach(e=>rows.push({d:e.created_at||e.expense_date,type:'Dépense',ref:'',detail:e.label,amt:Number(e.amount||0)}));
+ rows.sort((a,b)=>new Date(b.d)-new Date(a.d));
+ document.getElementById('historyBody').innerHTML=rows.map(r=>`<tr><td>${date(r.d)}</td><td>${r.type}</td><td>${esc(r.ref)}</td><td>${esc(r.detail)}</td><td>${money(r.amt)}</td></tr>`).join('')||'<tr><td colspan="5" class="muted">Aucune opération.</td></tr>';
+}
+function updateSelects(){const active=products.filter(p=>!p.archived);const opts=active.map(p=>`<option value="${p.id}">${esc(p.name)} — stock ${p.stock}</option>`).join('');document.getElementById('saleProduct').innerHTML=opts||'<option>Aucun produit actif</option>';document.getElementById('buyProduct').innerHTML=opts||'<option>Aucun produit actif</option>'}
+function date(v){return v?new Date(v).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):''}
+
+async function addProduct(){
+ const v={user_id:me.id,name:g('pname'),category:g('pcat'),unit:g('punit')||'unité',purchase_price:n('ppurchase'),retail_price:n('pretail'),wholesale_price:n('pwholesale'),stock:n('pstock'),min_stock:n('pmin'),archived:false};
+ if(!v.name)return toast('Nom du produit obligatoire');
+ const {error}=await sb.from('products').insert(v);if(error)return toast(error.message);
+ ['pname','pcat','ppurchase','pretail','pwholesale','pstock','pmin'].forEach(id=>document.getElementById(id).value='');toast('Produit ajouté');await loadAll();
+}
+async function addSale(){
+ const p=products.find(x=>x.id===g('saleProduct')&&!x.archived);if(!p)return toast('Aucun produit actif');
+ const qty=n('saleQty'),type=g('salePriceType');if(qty<=0||qty>Number(p.stock))return toast('Stock insuffisant');
+ let price=type==='retail'?Number(p.retail_price):type==='wholesale'?Number(p.wholesale_price):n('salePrice');if(price<=0)return toast('Prix invalide');
+ const total=qty*price,cost=qty*Number(p.purchase_price||0),paid=Math.min(n('salePaid'),total);
+ const row={user_id:me.id,invoice_number:'FAC-'+new Date().getFullYear()+'-'+String(sales.length+1).padStart(4,'0'),client_name:g('saleClient'),payment_method:g('salePayMethod'),total_amount:total,cost_amount:cost,paid_amount:paid,quantity:qty};
+ const {data,error}=await sb.from('sales').insert(row).select().single();if(error)return toast(error.message);
+ const si=await sb.from('sale_items').insert({user_id:me.id,sale_id:data.id,product_id:p.id,quantity:qty,unit_price:price,purchase_price:Number(p.purchase_price||0),total:total});
+ if(si.error)return toast(si.error.message);
+ const up=await sb.from('products').update({stock:Number(p.stock)-qty}).eq('id',p.id).eq('user_id',me.id);if(up.error)return toast(up.error.message);
+ toast('Vente enregistrée');await loadAll();
+}
+async function addPurchase(){
+ const p=products.find(x=>x.id===g('buyProduct')&&!x.archived);if(!p)return toast('Aucun produit actif');
+ const qty=n('buyQty'),price=n('buyPrice'),cargo=n('buyCargo'),paid=n('buyPaid');if(qty<=0||price<=0)return toast('Quantité/prix invalides');
+ const total=qty*price+cargo;
+ const ref='ACH-'+new Date().getFullYear()+'-'+String(purchases.length+1).padStart(4,'0');
+ const row={user_id:me.id,purchase_number:ref,invoice_number:ref,supplier_name:g('buySupplier'),total_amount:total,paid_amount:Math.min(paid,total),cargo_amount:cargo,quantity:qty};
+ const {data,error}=await sb.from('purchases').insert(row).select().single();if(error)return toast(error.message);
+ const pi=await sb.from('purchase_items').insert({user_id:me.id,purchase_id:data.id,product_id:p.id,quantity:qty,unit_price:price,total:qty*price});if(pi.error)return toast(pi.error.message);
+ const up=await sb.from('products').update({stock:Number(p.stock)+qty,purchase_price:price}).eq('id',p.id).eq('user_id',me.id);if(up.error)return toast(up.error.message);
+ toast('Achat enregistré');await loadAll();
+}
+async function addClient(){const v={user_id:me.id,name:g('cname'),phone:g('cphone'),address:g('caddress'),type:'client'};if(!v.name)return toast('Nom obligatoire');const {error}=await sb.from('clients').insert(v);if(error)return toast(error.message);toast('Client ajouté');await loadAll()}
+async function addSupplier(){const v={user_id:me.id,name:g('sname'),phone:g('sphone'),address:g('saddress'),type:'supplier'};if(!v.name)return toast('Nom obligatoire');const {error}=await sb.from('suppliers').insert(v);if(error)return toast(error.message);toast('Fournisseur ajouté');await loadAll()}
+async function addExpense(){const v={user_id:me.id,label:g('elabel'),amount:n('eamount'),category:g('ecat')};if(!v.label||v.amount<=0)return toast('Libellé et montant obligatoires');const {error}=await sb.from('expenses').insert(v);if(error)return toast(error.message);document.getElementById('elabel').value='';document.getElementById('eamount').value='';document.getElementById('ecat').value='';toast('Dépense enregistrée');await loadAll()}
+
+
+async function payAnonymousSale(id){
+ const s=sales.find(x=>x.id===id);
+ if(!s)return toast('Vente introuvable');
+ const due=Math.max(0,Number(s.total_amount||0)-Number(s.paid_amount||0));
+ if(due<=0)return toast('Cette vente est déjà payée');
+ const raw=prompt('Montant reçu (F CFA)\nReste : '+money(due));
+ if(raw===null)return;
+ const amount=Number(String(raw).replace(/\s/g,'').replace(',','.'));
+ if(!Number.isFinite(amount)||amount<=0)return toast('Montant invalide');
+ if(amount>due)return toast('Le paiement dépasse le reste à payer');
+ const clientName=prompt('Nom du client (facultatif) :');
+ if(clientName!==null && clientName.trim()) s.client_name=clientName.trim();
+ const patch={paid_amount:Number(s.paid_amount||0)+amount};
+ if(clientName!==null && clientName.trim()) patch.client_name=clientName.trim();
+ const r=await sb.from('sales').update(patch).eq('id',id).eq('user_id',me.id);
+ if(r.error)return toast('Erreur : '+r.error.message);
+ toast('Paiement enregistré : '+money(amount)+' — reste '+money(due-amount));
+ await loadAll();
+}
+
+async function receiveClientPayment(clientName){
+ const rows=sales.filter(s=>(s.client_name||'').trim()===clientName && Number(s.total_amount||0)>Number(s.paid_amount||0))
+   .sort((a,b)=>new Date(a.created_at||a.sale_date)-new Date(b.created_at||b.sale_date));
+ const debt=rows.reduce((a,s)=>a+Math.max(0,Number(s.total_amount||0)-Number(s.paid_amount||0)),0);
+ if(debt<=0)return toast('Aucune dette pour ce client');
+ const raw=prompt('Montant reçu de '+clientName+' (F CFA)\\nDette actuelle : '+money(debt));
+ if(raw===null)return;
+ const amount=Number(String(raw).replace(/\s/g,'').replace(',','.'));
+ if(!Number.isFinite(amount)||amount<=0)return toast('Montant invalide');
+ if(amount>debt)return toast('Le paiement dépasse la dette de '+money(debt));
+ let remaining=amount;
+ for(const s of rows){
+   if(remaining<=0)break;
+   const due=Math.max(0,Number(s.total_amount||0)-Number(s.paid_amount||0));
+   const pay=Math.min(remaining,due);
+   const r=await sb.from('sales').update({paid_amount:Number(s.paid_amount||0)+pay}).eq('id',s.id).eq('user_id',me.id);
+   if(r.error)return toast('Paiement arrêté : '+r.error.message);
+   remaining-=pay;
+ }
+ toast('Paiement client enregistré : '+money(amount)+' — reste '+money(debt-amount));
+ await loadAll();
+}
+
+async function paySupplierDebt(supplierName){
+ const rows=purchases.filter(p=>(p.supplier_name||'').trim()===supplierName && Number(p.total_amount||0)>Number(p.paid_amount||0))
+   .sort((a,b)=>new Date(a.created_at||a.purchase_date)-new Date(b.created_at||b.purchase_date));
+ const debt=rows.reduce((a,p)=>a+Math.max(0,Number(p.total_amount||0)-Number(p.paid_amount||0)),0);
+ if(debt<=0)return toast('Aucune dette envers ce fournisseur');
+ const raw=prompt('Montant payé à '+supplierName+' (F CFA)\\nDette actuelle : '+money(debt));
+ if(raw===null)return;
+ const amount=Number(String(raw).replace(/\s/g,'').replace(',','.'));
+ if(!Number.isFinite(amount)||amount<=0)return toast('Montant invalide');
+ if(amount>debt)return toast('Le paiement dépasse la dette de '+money(debt));
+ let remaining=amount;
+ for(const p of rows){
+   if(remaining<=0)break;
+   const due=Math.max(0,Number(p.total_amount||0)-Number(p.paid_amount||0));
+   const pay=Math.min(remaining,due);
+   const r=await sb.from('purchases').update({paid_amount:Number(p.paid_amount||0)+pay}).eq('id',p.id).eq('user_id',me.id);
+   if(r.error)return toast('Paiement arrêté : '+r.error.message);
+   remaining-=pay;
+ }
+ toast('Paiement fournisseur enregistré : '+money(amount)+' — reste '+money(debt-amount));
+ await loadAll();
+}
+
+async function archiveProduct(id){const {error}=await sb.from('products').update({archived:true}).eq('id',id).eq('user_id',me.id);if(error)return toast(error.message);toast('Produit archivé');await loadAll()}
+async function unarchiveProduct(id){const {error}=await sb.from('products').update({archived:false}).eq('id',id).eq('user_id',me.id);if(error)return toast(error.message);toast('Produit réactivé');await loadAll()}
+</script>
+</body></html>
